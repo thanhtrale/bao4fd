@@ -124,7 +124,7 @@ function addImage() {
     </div>
 
     <!-- Editor content -->
-    <EditorContent :editor="editor" class="prose prose-sm max-w-none p-4 min-h-[300px]" />
+    <EditorContent :editor="editor" class="prose prose-sm max-w-none" />
   </div>
 </template>
 
@@ -148,5 +148,8 @@ function addImage() {
 }
 :deep(.tiptap) {
   outline: none;
+  min-height: 300px;
+  padding: 1rem;
+  cursor: text;
 }
 </style>
