@@ -5,6 +5,11 @@ const slug = route.params.slug as string
 // Reactive page from query
 const page = computed(() => Number(route.query.page) || 1)
 
+// Scroll to top on page change
+watch(page, () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+})
+
 const { data: result, error, status } = await useFetch(() => `/api/articles?page=${page.value}&category=${slug}`, {
   watch: [page],
 })
