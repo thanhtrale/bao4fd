@@ -60,13 +60,12 @@ onUnmounted(() => {
           <div
             class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"
           />
-          <img
-            v-if="article.thumbnail"
+          <AppImage
             :src="article.thumbnail"
             :alt="article.title"
+            :eager="true"
             class="w-full h-full object-cover"
           />
-          <div v-else class="w-full h-full bg-gradient-to-br from-accent/20 to-slate-800" />
 
           <!-- Content overlay -->
           <div class="absolute bottom-0 left-0 right-0 p-6 md:p-10">

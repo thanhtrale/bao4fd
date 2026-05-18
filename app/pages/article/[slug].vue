@@ -3,14 +3,14 @@ const route = useRoute()
 const slug = route.params.slug as string
 
 const { fetchArticle } = useArticles()
-const { data: article, error } = await fetchArticle(slug)
+const { data: article, error, status } = await fetchArticle(slug)
 
 if (error.value || !article.value) {
   throw createError({ statusCode: 404, statusMessage: 'Article not found' })
 }
 
 useHead({
-  title: `${article.value.title} - Mini News Portal`,
+  title: `${article.value?.title || 'Article'} - Mini News Portal`,
 })
 
 // Estimated reading time
@@ -27,7 +27,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="article" class="max-w-3xl mx-auto">
+  <!-- Skeleton while loading -->
+  <SkeletonArticleDetail v-if="status === 'pending'" />
+
+  <div v-else-if="article" class="max-w-3xl mx-auto">
     <article>
       <!-- Breadcrumb -->
       <nav class="flex items-center gap-2 text-sm text-text-muted mb-4">
@@ -56,7 +59,7 @@ onMounted(() => {
 
       <!-- Hero image -->
       <div v-if="article.thumbnail" class="rounded-xl overflow-hidden mb-8">
-        <img
+        <AppImage
           :src="article.thumbnail"
           :alt="article.title"
           class="w-full max-h-120 object-cover"

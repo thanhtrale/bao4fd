@@ -5,7 +5,7 @@ const slug = route.params.slug as string
 // Reactive page from query
 const page = computed(() => Number(route.query.page) || 1)
 
-const { data: result, error, refresh } = await useFetch(() => `/api/articles?page=${page.value}&category=${slug}`, {
+const { data: result, error, status } = await useFetch(() => `/api/articles?page=${page.value}&category=${slug}`, {
   watch: [page],
 })
 
@@ -52,7 +52,11 @@ useHead({
       </span>
     </div>
 
+    <!-- Skeleton while loading -->
+    <SkeletonCategoryList v-if="status === 'pending' && !allArticles.length" />
+
     <ArticleList
+      v-else
       :articles="allArticles"
       :meta="meta"
       :category="slug"

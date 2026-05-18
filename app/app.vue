@@ -1,4 +1,5 @@
 <template>
+  <NuxtLoadingIndicator :height="2" :throttle="200" color="#2563eb" />
   <NuxtLayout>
     <NuxtPage :transition="{ name: 'page', mode: 'out-in' }" />
   </NuxtLayout>
