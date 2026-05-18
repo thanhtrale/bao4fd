@@ -1,20 +1,19 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Mini News Portal (MVP)
+  Tech stack: NuxtJS 3, Vercel (serverless free tier), Supabase (free tier)
+  Language: TypeScript, Vue 3 Composition API
+  Rendering: SSR for public pages, SPA for admin
+  Database: Supabase PostgreSQL (via connection pooler)
+  Auth: Supabase Auth (email/password + Google OAuth), admin email allowlist
+  Storage: Supabase Storage (public bucket for thumbnails)
+  Architecture: Layered - Transport (Nuxt server/api), Service (server/services), Persistence (Supabase)
+  Constraints: Vercel free plan (10s timeout, 100GB bandwidth), Supabase free plan (500MB DB, 1GB storage)
+  Third-party credentials: Use placeholders (SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, etc.)
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  tasks:
+    - Break tasks into small, independently testable chunks
+    - Use placeholder values for third-party keys/URLs
+    - Each task should be completable without user interruption
