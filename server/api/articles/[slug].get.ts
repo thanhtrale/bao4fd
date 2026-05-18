@@ -1,4 +1,4 @@
-import { getArticleBySlug } from '~/server/services/article.service'
+import { getArticleBySlug } from '../../services/article.service'
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, 'slug')

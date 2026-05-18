@@ -1,4 +1,4 @@
-import { getMostViewedToday } from '~/server/services/article.service'
+import { getMostViewedToday } from '../../services/article.service'
 
 export default defineEventHandler(async () => {
   const supabase = useSupabaseAdmin()

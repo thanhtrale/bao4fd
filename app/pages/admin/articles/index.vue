@@ -13,7 +13,9 @@ async function getToken() {
 async function loadArticles() {
   loading.value = true
   try {
-    const result = await $fetch('/api/articles?limit=100') as any
+    const result = await $fetch('/api/admin/articles', {
+      headers: { Authorization: `Bearer ${await getToken()}` },
+    }) as any
     articles.value = result.data
   } finally {
     loading.value = false

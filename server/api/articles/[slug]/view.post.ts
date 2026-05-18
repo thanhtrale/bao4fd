@@ -1,4 +1,4 @@
-import { incrementView } from '~/server/services/view.service'
+import { incrementView } from '../../../services/view.service'
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, 'slug')

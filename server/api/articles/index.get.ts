@@ -1,4 +1,4 @@
-import { getArticles } from '~/server/services/article.service'
+import { getArticles } from '../../services/article.service'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)

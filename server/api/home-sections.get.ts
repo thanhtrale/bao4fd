@@ -1,4 +1,4 @@
-import { getArticlesByCategory } from '~/server/services/article.service'
+import { getArticlesByCategory } from '../services/article.service'
 
 export default defineEventHandler(async () => {
   const supabase = useSupabaseAdmin()
