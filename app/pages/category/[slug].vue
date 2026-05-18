@@ -16,6 +16,7 @@ if (error.value) {
 // For mobile infinite scroll
 const allArticles = computed(() => (result.value as any)?.data || [])
 const meta = computed(() => (result.value as any)?.meta)
+const categoryName = computed(() => allArticles.value[0]?.categories?.name || slug.replace(/-/g, ' '))
 const loadingMore = ref(false)
 
 async function loadMore() {
@@ -37,15 +38,15 @@ async function loadMore() {
 }
 
 useHead({
-  title: `${slug} - Mini News Portal`,
+  title: computed(() => `${categoryName.value} - Mini News Portal`),
 })
 </script>
 
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold capitalize">
-        {{ slug.replace(/-/g, ' ') }}
+      <h1 class="text-2xl font-bold">
+        {{ categoryName }}
       </h1>
       <span v-if="meta" class="text-sm text-text-muted">
         {{ meta.total }} bài viết
