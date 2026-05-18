@@ -12,6 +12,23 @@ const emit = defineEmits<{
 const isMobile = ref(false)
 const loadMoreRef = ref<HTMLElement>()
 
+// Compute smart pagination range with ellipsis
+const paginationRange = computed(() => {
+  if (!props.meta) return []
+  const { page, totalPages } = props.meta
+  const range: (number | string)[] = []
+  const delta = 2
+
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= page - delta && i <= page + delta)) {
+      range.push(i)
+    } else if (range[range.length - 1] !== '...') {
+      range.push('...')
+    }
+  }
+  return range
+})
+
 onMounted(() => {
   isMobile.value = window.innerWidth < 768
 
@@ -32,31 +49,105 @@ onMounted(() => {
 
 <template>
   <div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
-      <ArticleCard v-for="article in articles" :key="article.id" :article="article" />
+    <!-- Horizontal article rows -->
+    <div class="space-y-4">
+      <article
+        v-for="article in articles"
+        :key="article.id"
+        class="flex gap-4 p-3 rounded-lg border border-border hover:shadow-md hover:border-accent/20 transition-all group"
+      >
+        <!-- Thumbnail -->
+        <NuxtLink :to="`/article/${article.slug}`" class="shrink-0 w-32 sm:w-44 aspect-video rounded-md overflow-hidden bg-surface">
+          <img
+            v-if="article.thumbnail"
+            :src="article.thumbnail"
+            :alt="article.title"
+            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+          <div v-else class="w-full h-full flex items-center justify-center bg-slate-100">
+            <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+        </NuxtLink>
+
+        <!-- Content -->
+        <div class="flex-1 min-w-0 flex flex-col justify-center">
+          <div class="flex items-center gap-2 mb-1">
+            <NuxtLink
+              v-if="article.categories"
+              :to="`/category/${article.categories.slug}`"
+              class="text-xs font-medium text-accent hover:underline"
+            >
+              {{ article.categories.name }}
+            </NuxtLink>
+            <span v-if="article.published_at" class="text-xs text-text-muted">
+              {{ relativeTime(article.published_at) }}
+            </span>
+          </div>
+          <NuxtLink :to="`/article/${article.slug}`">
+            <h3 class="font-semibold text-base leading-snug line-clamp-2 group-hover:text-accent transition-colors">
+              {{ article.title }}
+            </h3>
+          </NuxtLink>
+          <p v-if="article.excerpt" class="mt-1 text-sm text-text-secondary line-clamp-2 hidden sm:block">
+            {{ article.excerpt }}
+          </p>
+        </div>
+      </article>
     </div>
 
     <!-- Desktop pagination -->
-    <nav v-if="meta && meta.totalPages > 1 && !isMobile" style="margin-top: 20px; display: flex; gap: 8px; justify-content: center;">
+    <nav v-if="meta && meta.totalPages > 1 && !isMobile" class="mt-8 flex items-center justify-center gap-1">
+      <!-- Prev -->
       <NuxtLink
-        v-for="p in meta.totalPages"
-        :key="p"
-        :to="{ query: { page: p, ...(category ? { category } : {}) } }"
-        :style="{ fontWeight: p === meta.page ? 'bold' : 'normal', padding: '4px 12px', border: '1px solid #ccc', textDecoration: 'none' }"
+        v-if="meta.page > 1"
+        :to="{ query: { page: meta.page - 1 } }"
+        class="px-3 py-1.5 rounded text-sm font-medium text-text-secondary hover:bg-surface transition-colors"
       >
-        {{ p }}
+        ← Trước
+      </NuxtLink>
+
+      <!-- Page numbers -->
+      <template v-for="p in paginationRange" :key="p">
+        <span v-if="p === '...'" class="px-2 text-text-muted">...</span>
+        <NuxtLink
+          v-else
+          :to="{ query: { page: p } }"
+          class="w-9 h-9 flex items-center justify-center rounded text-sm font-medium transition-colors"
+          :class="p === meta.page
+            ? 'bg-accent text-white'
+            : 'text-text-secondary hover:bg-surface'"
+        >
+          {{ p }}
+        </NuxtLink>
+      </template>
+
+      <!-- Next -->
+      <NuxtLink
+        v-if="meta.page < meta.totalPages"
+        :to="{ query: { page: meta.page + 1 } }"
+        class="px-3 py-1.5 rounded text-sm font-medium text-text-secondary hover:bg-surface transition-colors"
+      >
+        Sau →
       </NuxtLink>
     </nav>
 
     <!-- Mobile infinite scroll trigger -->
-    <div v-if="isMobile && meta?.hasMore" ref="loadMoreRef" style="text-align: center; padding: 20px;">
-      Loading more...
+    <div v-if="isMobile && meta?.hasMore" ref="loadMoreRef" class="text-center py-6 text-sm text-text-muted">
+      <div class="inline-flex items-center gap-2">
+        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+        Đang tải thêm...
+      </div>
     </div>
 
     <!-- Max pages reached -->
-    <div v-if="meta && meta.page >= 50" style="text-align: center; padding: 20px;">
-      <NuxtLink :to="{ query: { page: 1 } }">
-        View all articles from the beginning
+    <div v-if="meta && meta.page >= 50" class="text-center py-6">
+      <NuxtLink :to="{ query: { page: 1 } }" class="text-sm text-accent hover:underline">
+        Xem lại từ đầu
       </NuxtLink>
     </div>
   </div>

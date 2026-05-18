@@ -13,6 +13,13 @@ useHead({
   title: `${article.value.title} - Mini News Portal`,
 })
 
+// Estimated reading time
+const readingTime = computed(() => {
+  if (!article.value?.content) return 0
+  const words = article.value.content.replace(/<[^>]*>/g, '').split(/\s+/).length
+  return Math.max(1, Math.ceil(words / 200))
+})
+
 // Fire-and-forget view tracking
 onMounted(() => {
   $fetch(`/api/articles/${slug}/view`, { method: 'POST' }).catch(() => {})
@@ -20,46 +27,69 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="article" style="max-width: 800px; margin: 0 auto;">
+  <div v-if="article" class="max-w-3xl mx-auto">
     <article>
-      <h1>{{ article.title }}</h1>
-
-      <div style="color: #666; margin-bottom: 16px;">
-        <NuxtLink v-if="article.categories" :to="`/category/${article.categories.slug}`">
+      <!-- Breadcrumb -->
+      <nav class="flex items-center gap-2 text-sm text-text-muted mb-4">
+        <NuxtLink to="/" class="hover:text-accent transition-colors">Trang chủ</NuxtLink>
+        <span>/</span>
+        <NuxtLink
+          v-if="article.categories"
+          :to="`/category/${article.categories.slug}`"
+          class="hover:text-accent transition-colors"
+        >
           {{ article.categories.name }}
         </NuxtLink>
-        <span v-if="article.published_at"> · {{ new Date(article.published_at).toLocaleDateString() }}</span>
+      </nav>
+
+      <!-- Title -->
+      <h1 class="text-3xl lg:text-4xl font-bold leading-tight mb-4">
+        {{ article.title }}
+      </h1>
+
+      <!-- Meta -->
+      <div class="flex items-center gap-3 text-sm text-text-muted mb-6">
+        <span v-if="article.published_at">{{ relativeTime(article.published_at) }}</span>
+        <span class="w-1 h-1 rounded-full bg-text-muted"></span>
+        <span>{{ readingTime }} phút đọc</span>
       </div>
 
-      <img
-        v-if="article.thumbnail"
-        :src="article.thumbnail"
-        :alt="article.title"
-        style="width: 100%; max-height: 400px; object-fit: cover; margin-bottom: 20px;"
-      >
+      <!-- Hero image -->
+      <div v-if="article.thumbnail" class="rounded-xl overflow-hidden mb-8">
+        <img
+          :src="article.thumbnail"
+          :alt="article.title"
+          class="w-full max-h-120 object-cover"
+        />
+      </div>
 
+      <!-- Content -->
       <!-- eslint-disable-next-line vue/no-v-html -->
-      <div v-html="article.content" />
+      <div class="prose prose-lg max-w-none" v-html="article.content" />
     </article>
 
     <!-- Newer / Older navigation -->
-    <nav style="display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
-      <div>
-        <template v-if="article.olderPost">
-          <small>← Older Post</small><br>
-          <NuxtLink :to="`/article/${article.olderPost.slug}`">
-            {{ article.olderPost.title }}
-          </NuxtLink>
-        </template>
+    <nav class="flex justify-between mt-12 pt-6 border-t border-border gap-4">
+      <div class="flex-1 min-w-0" v-if="article.olderPost">
+        <span class="text-xs text-text-muted">← Bài cũ hơn</span>
+        <NuxtLink
+          :to="`/article/${article.olderPost.slug}`"
+          class="block mt-1 text-sm font-medium line-clamp-2 hover:text-accent transition-colors"
+        >
+          {{ article.olderPost.title }}
+        </NuxtLink>
       </div>
-      <div style="text-align: right;">
-        <template v-if="article.newerPost">
-          <small>Newer Post →</small><br>
-          <NuxtLink :to="`/article/${article.newerPost.slug}`">
-            {{ article.newerPost.title }}
-          </NuxtLink>
-        </template>
+      <div v-else class="flex-1"></div>
+      <div class="flex-1 min-w-0 text-right" v-if="article.newerPost">
+        <span class="text-xs text-text-muted">Bài mới hơn →</span>
+        <NuxtLink
+          :to="`/article/${article.newerPost.slug}`"
+          class="block mt-1 text-sm font-medium line-clamp-2 hover:text-accent transition-colors"
+        >
+          {{ article.newerPost.title }}
+        </NuxtLink>
       </div>
+      <div v-else class="flex-1"></div>
     </nav>
   </div>
 </template>
