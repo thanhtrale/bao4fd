@@ -32,13 +32,6 @@ watch(() => route.path, () => {
 
       <!-- Right side -->
       <div class="flex items-center gap-3">
-        <NuxtLink
-          to="/admin"
-          class="text-xs px-3 py-1.5 rounded bg-accent hover:bg-accent-hover text-white font-medium transition-colors"
-        >
-          Admin
-        </NuxtLink>
-
         <!-- Mobile hamburger -->
         <button
           class="md:hidden p-1.5 rounded hover:bg-white/10"
