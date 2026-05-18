@@ -21,10 +21,10 @@ export default defineEventHandler(async (event) => {
     q = q.ilike('title', `%${search}%`)
   }
   if (dateFrom) {
-    q = q.gte('published_at', dateFrom)
+    q = q.gte('published_at', `${dateFrom}T00:00:00+07:00`)
   }
   if (dateTo) {
-    q = q.lte('published_at', `${dateTo}T23:59:59`)
+    q = q.lte('published_at', `${dateTo}T23:59:59+07:00`)
   }
 
   const { data, count, error } = await q
