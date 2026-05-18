@@ -17,7 +17,8 @@ export async function getArticles(
   supabase: SupabaseClient,
   options: { page?: number; limit?: number; category?: string } = {},
 ): Promise<ArticleListResult> {
-  const page = Math.max(1, options.page || 1)
+  const MAX_PAGE = 50
+  const page = Math.min(MAX_PAGE, Math.max(1, options.page || 1))
   const limit = Math.min(100, Math.max(1, options.limit || 20))
   const offset = (page - 1) * limit
 
@@ -47,7 +48,7 @@ export async function getArticles(
   if (error) throw error
 
   const total = count || 0
-  const totalPages = Math.ceil(total / limit)
+  const totalPages = Math.min(MAX_PAGE, Math.ceil(total / limit))
 
   return {
     data: data || [],
