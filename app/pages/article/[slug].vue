@@ -30,10 +30,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <!-- Skeleton while loading -->
-  <SkeletonArticleDetail v-if="status === 'pending'" />
+  <div>
+    <!-- Skeleton while loading -->
+    <SkeletonArticleDetail v-if="status === 'pending'" />
 
-  <div v-else-if="article" class="max-w-3xl mx-auto">
+    <div v-else-if="article" class="max-w-3xl mx-auto">
     <article>
       <!-- Breadcrumb -->
       <nav class="flex items-center gap-2 text-sm text-text-muted mb-4">
@@ -97,5 +98,6 @@ onMounted(() => {
       </div>
       <div v-else class="flex-1"></div>
     </nav>
+    </div>
   </div>
 </template>
