@@ -4,11 +4,14 @@ definePageMeta({ layout: 'admin', middleware: ['admin-auth'] })
 const articles = ref<any[]>([])
 const loading = ref(true)
 const meta = ref<{ page: number; totalPages: number; total: number } | null>(null)
+const authors = ref<any[]>([])
+const userRole = ref('')
 
 // Filters
 const search = ref('')
 const dateFrom = ref('')
 const dateTo = ref('')
+const authorFilter = ref('')
 const currentPage = ref(1)
 
 async function getToken() {
@@ -26,12 +29,17 @@ async function loadArticles() {
     if (search.value) params.set('search', search.value)
     if (dateFrom.value) params.set('dateFrom', dateFrom.value)
     if (dateTo.value) params.set('dateTo', dateTo.value)
+    if (authorFilter.value) params.set('author', authorFilter.value)
 
     const result = await $fetch(`/api/admin/articles?${params.toString()}`, {
       headers: { Authorization: `Bearer ${await getToken()}` },
     }) as any
     articles.value = result.data
     meta.value = result.meta
+    if (result.authors?.length) {
+      authors.value = result.authors
+      userRole.value = 'admin'
+    }
   } finally {
     loading.value = false
   }
@@ -120,6 +128,18 @@ onMounted(loadArticles)
           class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
         />
       </div>
+      <div v-if="userRole === 'admin' && authors.length">
+        <label class="block text-xs font-medium text-slate-500 mb-1">Tác giả</label>
+        <select
+          v-model="authorFilter"
+          class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+        >
+          <option value="">Tất cả</option>
+          <option v-for="a in authors" :key="a.id" :value="a.id">
+            {{ a.display_name || a.email }}
+          </option>
+        </select>
+      </div>
       <button
         class="px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent/90 transition-colors"
         @click="applyFilters"
@@ -128,7 +148,7 @@ onMounted(loadArticles)
       </button>
       <button
         class="px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
-        @click="search = ''; dateFrom = ''; dateTo = ''; applyFilters()"
+        @click="search = ''; dateFrom = ''; dateTo = ''; authorFilter = ''; applyFilters()"
       >
         Xóa bộ lọc
       </button>
@@ -146,6 +166,7 @@ onMounted(loadArticles)
         <thead>
           <tr class="border-b border-slate-200 bg-slate-50">
             <th class="text-left px-4 py-3 font-medium text-slate-600">Title</th>
+            <th v-if="userRole === 'admin'" class="text-left px-4 py-3 font-medium text-slate-600">Author</th>
             <th class="text-left px-4 py-3 font-medium text-slate-600">Status</th>
             <th class="text-left px-4 py-3 font-medium text-slate-600">Published</th>
             <th class="text-left px-4 py-3 font-medium text-slate-600">Actions</th>
@@ -154,6 +175,9 @@ onMounted(loadArticles)
         <tbody>
           <tr v-for="article in articles" :key="article.id" class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
             <td class="px-4 py-3 font-medium text-slate-800">{{ article.title }}</td>
+            <td v-if="userRole === 'admin'" class="px-4 py-3 text-slate-500 text-xs">
+              {{ article.profiles?.display_name || article.profiles?.email || '-' }}
+            </td>
             <td class="px-4 py-3">
               <span
                 class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
@@ -171,7 +195,7 @@ onMounted(loadArticles)
             </td>
           </tr>
           <tr v-if="!articles.length">
-            <td colspan="4" class="px-4 py-8 text-center text-slate-400">Không tìm thấy bài viết nào</td>
+            <td :colspan="userRole === 'admin' ? 5 : 4" class="px-4 py-8 text-center text-slate-400">Không tìm thấy bài viết nào</td>
           </tr>
         </tbody>
       </table>

@@ -39,6 +39,27 @@ export function useAuth() {
     }
   }
 
+  async function signUpWithEmail(email: string, password: string) {
+    loading.value = true
+    error.value = null
+    try {
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/admin/login`,
+        },
+      })
+      if (authError) {
+        error.value = authError.message
+        return false
+      }
+      return true
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function logout() {
     await supabase.auth.signOut()
     user.value = null
@@ -55,10 +76,11 @@ export function useAuth() {
   return {
     user: readonly(user),
     loading: readonly(loading),
-    error: readonly(error),
+    error,
     init,
     loginWithEmail,
     loginWithGoogle,
+    signUpWithEmail,
     logout,
   }
 }

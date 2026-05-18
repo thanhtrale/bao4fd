@@ -1,5 +1,5 @@
 export default defineEventHandler(async (event) => {
-  await requireAuth(event)
+  await requireAdmin(event)
 
   const body = await readBody(event)
 

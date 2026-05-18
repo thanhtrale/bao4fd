@@ -1,5 +1,5 @@
 export default defineEventHandler(async (event) => {
-  await requireAuth(event)
+  const user = await requireAuth(event)
 
   const body = await readBody(event)
 
@@ -28,6 +28,7 @@ export default defineEventHandler(async (event) => {
       category_id: body.category_id,
       is_published: body.is_published ?? false,
       published_at: body.is_published ? new Date().toISOString() : null,
+      author_id: user.id,
     })
     .select()
     .single()
