@@ -19,6 +19,14 @@ function goTo(index: number) {
   currentIndex.value = index
 }
 
+function prev() {
+  currentIndex.value = (currentIndex.value - 1 + props.articles.length) % props.articles.length
+}
+
+function next() {
+  currentIndex.value = (currentIndex.value + 1) % props.articles.length
+}
+
 onMounted(() => {
   if (props.articles.length > 1) startAutoRotate()
 })
@@ -30,7 +38,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="relative w-full h-64 md:h-96 rounded-xl overflow-hidden bg-slate-900"
+    class="group relative w-full h-64 md:h-96 rounded-xl overflow-hidden bg-slate-900"
     @mouseenter="paused = true"
     @mouseleave="paused = false"
   >
@@ -78,6 +86,26 @@ onUnmounted(() => {
         </NuxtLink>
       </div>
     </TransitionGroup>
+
+    <!-- Chevron Navigation -->
+    <button
+      v-if="articles.length > 1"
+      class="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 hover:bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+      @click="prev"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </button>
+    <button
+      v-if="articles.length > 1"
+      class="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 hover:bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+      @click="next"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+    </button>
 
     <!-- Dots -->
     <div v-if="articles.length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">

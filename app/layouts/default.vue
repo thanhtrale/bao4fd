@@ -7,4 +7,3 @@
     <SiteFooter />
   </div>
 </template>
-</template>
