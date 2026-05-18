@@ -124,7 +124,7 @@ function addImage() {
     </div>
 
     <!-- Editor content -->
-    <EditorContent :editor="editor" class="prose prose-sm max-w-none p-4 min-h-[300px] focus:outline-none" />
+    <EditorContent :editor="editor" class="prose prose-sm max-w-none p-4 min-h-[300px]" />
   </div>
 </template>
 
@@ -145,5 +145,8 @@ function addImage() {
   background-color: rgba(37, 99, 235, 0.1);
   color: #2563eb;
   font-weight: 600;
+}
+:deep(.tiptap) {
+  outline: none;
 }
 </style>
