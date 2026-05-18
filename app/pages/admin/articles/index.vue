@@ -3,6 +3,13 @@ definePageMeta({ layout: 'admin', middleware: ['admin-auth'] })
 
 const articles = ref<any[]>([])
 const loading = ref(true)
+const meta = ref<{ page: number; totalPages: number; total: number } | null>(null)
+
+// Filters
+const search = ref('')
+const dateFrom = ref('')
+const dateTo = ref('')
+const currentPage = ref(1)
 
 async function getToken() {
   const supabase = useSupabaseClient()
@@ -13,13 +20,31 @@ async function getToken() {
 async function loadArticles() {
   loading.value = true
   try {
-    const result = await $fetch('/api/admin/articles', {
+    const params = new URLSearchParams()
+    params.set('page', String(currentPage.value))
+    params.set('limit', '20')
+    if (search.value) params.set('search', search.value)
+    if (dateFrom.value) params.set('dateFrom', dateFrom.value)
+    if (dateTo.value) params.set('dateTo', dateTo.value)
+
+    const result = await $fetch(`/api/admin/articles?${params.toString()}`, {
       headers: { Authorization: `Bearer ${await getToken()}` },
     }) as any
     articles.value = result.data
+    meta.value = result.meta
   } finally {
     loading.value = false
   }
+}
+
+function applyFilters() {
+  currentPage.value = 1
+  loadArticles()
+}
+
+function goToPage(page: number) {
+  currentPage.value = page
+  loadArticles()
 }
 
 async function deleteArticle(id: string) {
@@ -36,6 +61,22 @@ async function deleteArticle(id: string) {
   }
 }
 
+// Pagination range with ellipsis
+const paginationRange = computed(() => {
+  if (!meta.value) return []
+  const { page, totalPages } = meta.value
+  const range: (number | string)[] = []
+  const delta = 2
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= page - delta && i <= page + delta)) {
+      range.push(i)
+    } else if (range[range.length - 1] !== '...') {
+      range.push('...')
+    }
+  }
+  return range
+})
+
 onMounted(loadArticles)
 </script>
 
@@ -49,6 +90,53 @@ onMounted(loadArticles)
       >
         + New Article
       </NuxtLink>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-3 mb-4 items-end">
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-xs font-medium text-slate-500 mb-1">Tìm theo tên</label>
+        <input
+          v-model="search"
+          type="text"
+          placeholder="Tên bài viết..."
+          class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+          @keyup.enter="applyFilters"
+        />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Từ ngày</label>
+        <input
+          v-model="dateFrom"
+          type="date"
+          class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+        />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Đến ngày</label>
+        <input
+          v-model="dateTo"
+          type="date"
+          class="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/30"
+        />
+      </div>
+      <button
+        class="px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent/90 transition-colors"
+        @click="applyFilters"
+      >
+        Lọc
+      </button>
+      <button
+        class="px-4 py-2 border border-slate-200 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+        @click="search = ''; dateFrom = ''; dateTo = ''; applyFilters()"
+      >
+        Xóa bộ lọc
+      </button>
+    </div>
+
+    <!-- Results count -->
+    <div v-if="meta" class="text-xs text-slate-500 mb-3">
+      {{ meta.total }} bài viết | Trang {{ meta.page }}/{{ meta.totalPages }}
     </div>
 
     <div v-if="loading" class="text-sm text-slate-500">Loading...</div>
@@ -82,8 +170,40 @@ onMounted(loadArticles)
               <button class="ml-3 text-red-500 hover:text-red-700 transition-colors" @click="deleteArticle(article.id)">Delete</button>
             </td>
           </tr>
+          <tr v-if="!articles.length">
+            <td colspan="4" class="px-4 py-8 text-center text-slate-400">Không tìm thấy bài viết nào</td>
+          </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="meta && meta.totalPages > 1" class="flex items-center justify-center gap-1 mt-6">
+      <button
+        :disabled="meta.page <= 1"
+        class="px-3 py-1.5 text-sm rounded-md border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+        @click="goToPage(meta!.page - 1)"
+      >
+        ←
+      </button>
+      <template v-for="item in paginationRange" :key="item">
+        <span v-if="item === '...'" class="px-2 text-slate-400">...</span>
+        <button
+          v-else
+          class="px-3 py-1.5 text-sm rounded-md border transition-colors"
+          :class="item === meta.page ? 'bg-accent text-white border-accent' : 'border-slate-200 hover:bg-slate-50'"
+          @click="goToPage(item as number)"
+        >
+          {{ item }}
+        </button>
+      </template>
+      <button
+        :disabled="meta.page >= meta.totalPages"
+        class="px-3 py-1.5 text-sm rounded-md border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+        @click="goToPage(meta!.page + 1)"
+      >
+        →
+      </button>
     </div>
   </div>
 </template>
