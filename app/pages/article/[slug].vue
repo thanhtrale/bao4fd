@@ -1,18 +1,19 @@
 <script setup lang="ts">
-const route = useRoute()
-const slug = computed(() => route.params.slug as string)
+definePageMeta({
+  key: route => route.fullPath,
+})
 
-const { data: article, error, status } = await useFetch(
-  () => `/api/articles/${slug.value}`,
-  { watch: [slug] },
-)
+const route = useRoute()
+const slug = route.params.slug as string
+
+const { data: article, error, status } = await useFetch(`/api/articles/${slug}`)
 
 if (error.value || !article.value) {
   throw createError({ statusCode: 404, statusMessage: 'Article not found' })
 }
 
 useHead({
-  title: computed(() => `${article.value?.title || 'Article'} - Mini News Portal`),
+  title: `${article.value?.title || 'Article'} - Mini News Portal`,
 })
 
 // Estimated reading time
@@ -23,9 +24,9 @@ const readingTime = computed(() => {
 })
 
 // Fire-and-forget view tracking
-watch(slug, (newSlug) => {
-  $fetch(`/api/articles/${newSlug}/view`, { method: 'POST' }).catch(() => {})
-}, { immediate: true })
+onMounted(() => {
+  $fetch(`/api/articles/${slug}/view`, { method: 'POST' }).catch(() => {})
+})
 </script>
 
 <template>
