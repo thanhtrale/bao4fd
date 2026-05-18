@@ -130,9 +130,20 @@ function addImage() {
 
 <style scoped>
 .toolbar-btn {
-  @apply px-2 py-1 text-sm rounded hover:bg-slate-200 transition-colors text-slate-600 min-w-[28px] text-center;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.15s;
+  color: #475569;
+  min-width: 28px;
+  text-align: center;
+}
+.toolbar-btn:hover {
+  background-color: #e2e8f0;
 }
 .toolbar-btn.active {
-  @apply bg-accent/10 text-accent font-semibold;
+  background-color: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+  font-weight: 600;
 }
 </style>
