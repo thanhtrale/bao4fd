@@ -1,7 +1,7 @@
 export default defineEventHandler(async (event) => {
   await requireAuth(event)
 
-  const id = getRouterParam(event, 'id')
+  const id = getRouterParam(event, 'slug')
   if (!id) throw createError({ statusCode: 400, statusMessage: 'Missing article id' })
 
   const body = await readBody(event)
