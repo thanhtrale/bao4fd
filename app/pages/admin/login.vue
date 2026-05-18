@@ -17,45 +17,58 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div style="max-width: 400px; margin: 100px auto; padding: 20px;">
-    <h1>Admin Login</h1>
+  <div class="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+    <div class="w-full max-w-sm bg-white rounded-xl shadow-lg p-8">
+      <h1 class="text-2xl font-bold text-center mb-6">Admin Login</h1>
 
-    <div v-if="error" style="color: red; margin-bottom: 16px;">
-      {{ error }}
-    </div>
-
-    <form @submit.prevent="handleSubmit">
-      <div style="margin-bottom: 12px;">
-        <label for="email">Email</label><br>
-        <input
-          id="email"
-          v-model="email"
-          type="email"
-          required
-          style="width: 100%; padding: 8px;"
-        >
+      <div v-if="error" class="mb-4 p-3 rounded-lg bg-red-50 text-red-600 text-sm">
+        {{ error }}
       </div>
 
-      <div style="margin-bottom: 12px;">
-        <label for="password">Password</label><br>
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          required
-          style="width: 100%; padding: 8px;"
+      <form @submit.prevent="handleSubmit" class="space-y-4">
+        <div>
+          <label for="email" class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+          <input
+            id="email"
+            v-model="email"
+            type="email"
+            required
+            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-colors"
+            placeholder="admin@example.com"
+          />
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+          <input
+            id="password"
+            v-model="password"
+            type="password"
+            required
+            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-colors"
+          />
+        </div>
+
+        <button
+          type="submit"
+          :disabled="loading"
+          class="w-full py-2.5 bg-accent text-white font-medium rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors"
         >
+          {{ loading ? 'Logging in...' : 'Login' }}
+        </button>
+      </form>
+
+      <div class="relative my-6">
+        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
+        <div class="relative flex justify-center"><span class="bg-white px-3 text-xs text-slate-400">or</span></div>
       </div>
 
-      <button type="submit" :disabled="loading" style="width: 100%; padding: 10px; margin-bottom: 12px;">
-        {{ loading ? 'Logging in...' : 'Login' }}
+      <button
+        class="w-full py-2.5 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+        @click="loginWithGoogle"
+      >
+        Login with Google
       </button>
-    </form>
-
-    <hr>
-
-    <button style="width: 100%; padding: 10px;" @click="loginWithGoogle">
-      Login with Google
-    </button>
+    </div>
   </div>
 </template>
