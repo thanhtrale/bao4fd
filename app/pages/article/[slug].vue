@@ -12,6 +12,11 @@ if (error.value || !article.value) {
 useHead({
   title: `${article.value.title} - Mini News Portal`,
 })
+
+// Fire-and-forget view tracking
+onMounted(() => {
+  $fetch(`/api/articles/${slug}/view`, { method: 'POST' }).catch(() => {})
+})
 </script>
 
 <template>
