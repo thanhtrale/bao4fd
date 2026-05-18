@@ -58,7 +58,6 @@ async function handleSubmit() {
             v-model="password"
             type="password"
             required
-            minlength="6"
             class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-colors"
           />
         </div>
