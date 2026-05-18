@@ -5,16 +5,17 @@ const slug = route.params.slug as string
 // Reactive page from query
 const page = computed(() => Number(route.query.page) || 1)
 
-const { fetchArticles } = useArticles()
-const { data: result, error } = await fetchArticles({ page: page.value, category: slug })
+const { data: result, error, refresh } = await useFetch(() => `/api/articles?page=${page.value}&category=${slug}`, {
+  watch: [page],
+})
 
 if (error.value) {
   throw createError({ statusCode: 404, statusMessage: 'Category not found' })
 }
 
 // For mobile infinite scroll
-const allArticles = ref(result.value?.data || [])
-const meta = ref(result.value?.meta)
+const allArticles = computed(() => (result.value as any)?.data || [])
+const meta = computed(() => (result.value as any)?.meta)
 const loadingMore = ref(false)
 
 async function loadMore() {
@@ -25,8 +26,11 @@ async function loadMore() {
     const nextPage = (meta.value?.page || 1) + 1
     const response = await $fetch(`/api/articles?page=${nextPage}&category=${slug}`)
     const typed = response as any
-    allArticles.value = [...allArticles.value, ...typed.data]
-    meta.value = typed.meta
+    // Append to existing data for infinite scroll
+    if (result.value) {
+      ;(result.value as any).data = [...(result.value as any).data, ...typed.data]
+      ;(result.value as any).meta = typed.meta
+    }
   } finally {
     loadingMore.value = false
   }
