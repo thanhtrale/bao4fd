@@ -2,7 +2,7 @@ export default defineEventHandler(async (event) => {
   const user = await requireAdmin(event)
   const body = await readBody(event)
 
-  const { urls, categoryId } = body as { urls?: string[]; categoryId?: string }
+  const { urls, categoryId, notifyEmail } = body as { urls?: string[]; categoryId?: string; notifyEmail?: boolean }
 
   if (!urls || !Array.isArray(urls) || urls.length === 0) {
     throw createError({ statusCode: 400, statusMessage: 'urls is required and must be a non-empty array' })
@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Dedup check
-  const { checkDuplicateUrls, createBatch } = await import('~/server/services/import.service')
+  const { checkDuplicateUrls, createBatch } = await import('../../services/import.service')
   const duplicates = await checkDuplicateUrls(supabase, urls)
   const uniqueUrls = urls.filter(url => !duplicates.includes(url))
 
@@ -78,24 +78,27 @@ export default defineEventHandler(async (event) => {
     categoryId,
     urls: uniqueUrls,
     createdBy: user.id,
+    notifyEmail: !!notifyEmail,
   })
 
   // Trigger background processing via self-chain
   const config = useRuntimeConfig()
   const baseUrl = getRequestURL(event).origin
 
-  event.waitUntil(
-    fetch(`${baseUrl}/api/admin/process-imports`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-internal-key': config.internalApiKey,
-      },
-      body: JSON.stringify({ batchId }),
-    }).catch(() => {
-      // Chain trigger failed — jobs remain pending, can be retried from dashboard
-    }),
-  )
+  const chainPromise = fetch(`${baseUrl}/api/admin/process-imports`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-key': config.internalApiKey,
+    },
+    body: JSON.stringify({ batchId }),
+  }).catch((err) => {
+    console.error('[bulk-import] Chain trigger failed:', err)
+  })
+
+  if (typeof event.waitUntil === 'function') {
+    event.waitUntil(chainPromise)
+  }
 
   setResponseStatus(event, 202)
   return {

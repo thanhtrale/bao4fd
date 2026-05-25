@@ -1,6 +1,15 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] })
 
+interface Job {
+  id: string
+  url: string
+  status: string
+  error_message: string | null
+  article_slug: string | null
+  updated_at: string
+}
+
 interface BatchCounts {
   pending: number
   processing: number
@@ -22,7 +31,9 @@ interface Batch {
 const supabase = useSupabaseClient()
 const loading = ref(true)
 const batches = ref<Batch[]>([])
-
+const expandedBatch = ref<string | null>(null)
+const batchJobs = ref<Record<string, Job[]>>({})
+const loadingJobs = ref<string | null>(null)
 async function loadBatches() {
   try {
     const { data: session } = await supabase.auth.getSession()
@@ -47,36 +58,34 @@ const channel = supabase
   .channel('import-jobs-changes')
   .on(
     'postgres_changes' as any,
-    { event: 'UPDATE', schema: 'public', table: 'import_jobs' },
+    { event: '*', schema: 'public', table: 'import_jobs' },
     (payload: any) => {
-      const { batch_id, status } = payload.new
-      const oldStatus = payload.old?.status
-
-      // Update the local counts
-      const batch = batches.value.find(b => b.id === batch_id)
-      if (batch && oldStatus && oldStatus !== status) {
-        if (oldStatus in batch.counts) {
-          batch.counts[oldStatus as keyof BatchCounts] = Math.max(0, batch.counts[oldStatus as keyof BatchCounts] - 1)
-        }
-        if (status in batch.counts) {
-          batch.counts[status as keyof BatchCounts]++
-        }
-
-        // Update batch status based on counts
-        const total = batch.counts.published + batch.counts.failed
-        if (total === batch.total_urls) {
-          batch.status = batch.counts.failed > 0 ? 'partial_failure' : 'completed'
-        }
-        else if (batch.counts.processing > 0) {
-          batch.status = 'processing'
-        }
-      }
+      // Any change on import_jobs → reload batches from API
+      loadBatches()
     },
   )
   .subscribe()
 
+// Polling fallback (every 5s) in case Realtime doesn't work
+const hasActiveBatches = computed(() =>
+  batches.value.some(b => b.status === 'pending' || b.status === 'processing'),
+)
+
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
+watch(hasActiveBatches, (active) => {
+  if (active && !pollTimer) {
+    pollTimer = setInterval(() => loadBatches(), 5000)
+  }
+  else if (!active && pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}, { immediate: true })
+
 onUnmounted(() => {
   supabase.removeChannel(channel)
+  if (pollTimer) clearInterval(pollTimer)
 })
 
 function progressPercent(batch: Batch): number {
@@ -113,6 +122,41 @@ function formatTime(dateStr: string): string {
     minute: '2-digit',
   })
 }
+
+async function toggleBatchDetail(batchId: string) {
+  if (expandedBatch.value === batchId) {
+    expandedBatch.value = null
+    return
+  }
+  expandedBatch.value = batchId
+  await loadJobsForBatch(batchId)
+}
+
+async function loadJobsForBatch(batchId: string) {
+  loadingJobs.value = batchId
+  try {
+    const { data: session } = await supabase.auth.getSession()
+    const result = await $fetch('/api/admin/import-jobs', {
+      params: { batchId },
+      headers: { Authorization: `Bearer ${session.session?.access_token}` },
+    })
+    batchJobs.value[batchId] = (result as any).jobs || []
+  }
+  catch {
+    batchJobs.value[batchId] = []
+  }
+  finally {
+    loadingJobs.value = null
+  }
+}
+
+function jobStatusIcon(status: string): string {
+  return { published: '✓', failed: '✗', processing: '⟳', pending: '○' }[status] || '?'
+}
+
+function jobStatusColor(status: string): string {
+  return { published: 'text-green-600', failed: 'text-red-500', processing: 'text-blue-500', pending: 'text-slate-400' }[status] || 'text-slate-400'
+}
 </script>
 
 <template>
@@ -148,9 +192,13 @@ function formatTime(dateStr: string): string {
         :key="batch.id"
         class="bg-white border border-slate-200 rounded-xl p-5"
       >
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-3">
+        <!-- Header (clickable) -->
+        <div
+          class="flex items-center justify-between mb-3 cursor-pointer"
+          @click="toggleBatchDetail(batch.id)"
+        >
           <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-400 transition-transform" :class="{ 'rotate-90': expandedBatch === batch.id }">▶</span>
             <span class="font-medium text-slate-800">
               {{ batch.categories?.name || 'Unknown' }}
             </span>
@@ -174,6 +222,34 @@ function formatTime(dateStr: string): string {
           <span class="text-slate-400" v-if="batch.counts.pending > 0">○ {{ batch.counts.pending }}</span>
           <span class="text-red-500" v-if="batch.counts.failed > 0">✗ {{ batch.counts.failed }}</span>
           <span class="ml-auto text-slate-400">{{ progressPercent(batch) }}%</span>
+        </div>
+
+        <!-- Expandable job details -->
+        <div v-if="expandedBatch === batch.id" class="mt-4 border-t border-slate-100 pt-4">
+          <div v-if="loadingJobs === batch.id" class="text-xs text-slate-400 py-2">Đang tải chi tiết...</div>
+          <div v-else-if="batchJobs[batch.id]?.length" class="space-y-2">
+            <div
+              v-for="job in batchJobs[batch.id]"
+              :key="job.id"
+              class="flex items-start gap-2 text-xs py-1.5 border-b border-slate-50 last:border-0"
+            >
+              <span :class="[jobStatusColor(job.status), 'font-medium shrink-0 mt-0.5']">{{ jobStatusIcon(job.status) }}</span>
+              <div class="min-w-0 flex-1">
+                <a :href="job.url" target="_blank" class="text-slate-600 hover:text-accent truncate block">
+                  {{ job.url }}
+                </a>
+                <div v-if="job.status === 'published' && job.article_slug" class="mt-0.5">
+                  <NuxtLink :to="`/article/${job.article_slug}`" class="text-green-600 hover:underline">
+                    → /article/{{ job.article_slug }}
+                  </NuxtLink>
+                </div>
+                <div v-if="job.status === 'failed' && job.error_message" class="mt-0.5 text-red-400">
+                  {{ job.error_message }}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-xs text-slate-400 py-2">Không có dữ liệu</div>
         </div>
       </div>
     </div>

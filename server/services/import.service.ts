@@ -4,6 +4,7 @@ export interface CreateBatchInput {
   categoryId: string
   urls: string[]
   createdBy: string
+  notifyEmail?: boolean
 }
 
 export async function createBatch(supabase: SupabaseClient, input: CreateBatchInput) {
@@ -14,6 +15,7 @@ export async function createBatch(supabase: SupabaseClient, input: CreateBatchIn
       total_urls: input.urls.length,
       status: 'pending',
       created_by: input.createdBy,
+      notify_email: !!input.notifyEmail,
     })
     .select('id')
     .single()

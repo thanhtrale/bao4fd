@@ -6,11 +6,12 @@ const { fetchCategories } = useCategories()
 
 const urlText = ref('')
 const categoryId = ref('')
+const notifyEmail = ref(false)
 const submitting = ref(false)
 const errorMsg = ref('')
 const skipped = ref<string[]>([])
 
-const { data: categories } = await useAsyncData('admin-categories', () => fetchCategories())
+const { data: categories } = await fetchCategories()
 
 function getUrls(): string[] {
   return urlText.value
@@ -58,7 +59,7 @@ async function submit() {
     const result = await $fetch('/api/admin/bulk-import', {
       method: 'POST',
       headers: { Authorization: `Bearer ${session?.access_token}` },
-      body: { urls: getUrls(), categoryId: categoryId.value },
+      body: { urls: getUrls(), categoryId: categoryId.value, notifyEmail: notifyEmail.value },
     })
 
     if (result.skipped && result.skipped.length > 0) {
@@ -136,6 +137,19 @@ const urlCount = computed(() => getUrls().length)
           class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent resize-y"
           :class="{ 'border-red-300': urlCount > 100 }"
         />
+      </div>
+
+      <!-- Notify email -->
+      <div class="mb-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            v-model="notifyEmail"
+            type="checkbox"
+            class="w-4 h-4 rounded border-slate-300 text-accent focus:ring-accent/30"
+          >
+          <span class="text-sm text-slate-700">Gửi email báo cáo khi import xong</span>
+        </label>
+        <p class="text-xs text-slate-400 mt-1 ml-6">Bao gồm danh sách thành công/thất bại và link bài viết đã import</p>
       </div>
 
       <!-- Submit -->

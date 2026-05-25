@@ -1,4 +1,4 @@
-import { getBatchesWithCounts } from '~/server/services/import.service'
+import { getBatchesWithCounts } from '../../services/import.service'
 
 export default defineEventHandler(async (event) => {
   await requireAdmin(event)

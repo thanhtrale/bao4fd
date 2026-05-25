@@ -1,4 +1,4 @@
-import { getScraperForUrl } from '~/server/services/scraper'
+import { getScraperForUrl } from '../../services/scraper'
 import {
   getJobsToProcess,
   markJobPublished,
@@ -7,8 +7,8 @@ import {
   getRemainingJobCount,
   incrementInvocationCount,
   finalizeBatch,
-} from '~/server/services/import.service'
-import { sendFailureDigest } from '~/server/services/email.service'
+} from '../../services/import.service'
+import { sendFailureDigest, sendImportReport } from '../../services/email.service'
 
 export default defineEventHandler(async (event) => {
   // Auth: admin token OR internal API key
@@ -16,10 +16,11 @@ export default defineEventHandler(async (event) => {
   const internalKey = getRequestHeader(event, 'x-internal-key')
 
   if (internalKey && internalKey === config.internalApiKey) {
-    // Internal chain call — authorized
+    console.log('[process-imports] Auth: internal key')
   }
   else {
     await requireAdmin(event)
+    console.log('[process-imports] Auth: admin token')
   }
 
   const body = await readBody(event)
@@ -40,7 +41,7 @@ export default defineEventHandler(async (event) => {
   // Get batch info for category
   const { data: batch } = await supabase
     .from('import_batches')
-    .select('category_id')
+    .select('category_id, notify_email')
     .eq('id', batchId)
     .single()
 
@@ -116,21 +117,32 @@ export default defineEventHandler(async (event) => {
     // Self-chain: trigger next batch
     const baseUrl = getRequestURL(event).origin
 
-    event.waitUntil(
-      fetch(`${baseUrl}/api/admin/process-imports`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-internal-key': config.internalApiKey,
-        },
-        body: JSON.stringify({ batchId }),
-      }).catch(() => {}),
-    )
+    const chainPromise = fetch(`${baseUrl}/api/admin/process-imports`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-key': config.internalApiKey,
+      },
+      body: JSON.stringify({ batchId }),
+    }).catch((err) => {
+      console.error('[process-imports] Chain failed:', err)
+    })
+
+    if (typeof event.waitUntil === 'function') {
+      event.waitUntil(chainPromise)
+    }
   }
   else {
     // All done — finalize batch
     const batchStatus = await finalizeBatch(supabase, batchId)
-    if (batchStatus === 'partial_failure') {
+    const siteUrl = getRequestURL(event).origin
+
+    if (batch.notify_email) {
+      // User opted in: send full report (success + failure)
+      await sendImportReport(supabase, batchId, siteUrl)
+    }
+    else if (batchStatus === 'partial_failure') {
+      // Default: only send on failure
       await sendFailureDigest(supabase, batchId)
     }
   }
