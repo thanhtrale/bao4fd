@@ -36,6 +36,7 @@ export default defineNuxtConfig({
     supabaseUrl: process.env.SUPABASE_URL || '',
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     adminEmails: process.env.ADMIN_EMAILS || '',
+    internalApiKey: process.env.INTERNAL_API_KEY || '',
     public: {
       supabaseUrl: process.env.SUPABASE_URL || '',
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
