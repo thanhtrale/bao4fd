@@ -12,6 +12,7 @@ const { logout } = useAuth()
             <NuxtLink to="/admin" class="px-3 py-1.5 rounded text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">Dashboard</NuxtLink>
             <NuxtLink to="/admin/categories" class="px-3 py-1.5 rounded text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">Categories</NuxtLink>
             <NuxtLink to="/admin/articles" class="px-3 py-1.5 rounded text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">Articles</NuxtLink>
+            <NuxtLink to="/admin/imports" class="px-3 py-1.5 rounded text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">Import</NuxtLink>
           </nav>
         </div>
         <div class="flex items-center gap-4">

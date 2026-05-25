@@ -11,7 +11,7 @@ const { logout, user } = useAuth()
       <p class="text-sm text-slate-500 mt-1">Welcome, {{ user?.email }}</p>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
       <NuxtLink
         to="/admin/categories"
         class="p-5 bg-white border border-slate-200 rounded-xl hover:border-accent/30 hover:shadow-md transition-all group"
@@ -25,6 +25,13 @@ const { logout, user } = useAuth()
       >
         <h3 class="font-semibold text-slate-800 group-hover:text-accent transition-colors">Articles</h3>
         <p class="text-sm text-slate-500 mt-1">Manage news articles</p>
+      </NuxtLink>
+      <NuxtLink
+        to="/admin/imports"
+        class="p-5 bg-white border border-slate-200 rounded-xl hover:border-accent/30 hover:shadow-md transition-all group"
+      >
+        <h3 class="font-semibold text-slate-800 group-hover:text-accent transition-colors">Bulk Import</h3>
+        <p class="text-sm text-slate-500 mt-1">Import articles from URLs</p>
       </NuxtLink>
     </div>
 
