@@ -8,6 +8,7 @@ import {
   incrementInvocationCount,
   finalizeBatch,
 } from '~/server/services/import.service'
+import { sendFailureDigest } from '~/server/services/email.service'
 
 export default defineEventHandler(async (event) => {
   // Auth: admin token OR internal API key
@@ -128,7 +129,10 @@ export default defineEventHandler(async (event) => {
   }
   else {
     // All done — finalize batch
-    await finalizeBatch(supabase, batchId)
+    const batchStatus = await finalizeBatch(supabase, batchId)
+    if (batchStatus === 'partial_failure') {
+      await sendFailureDigest(supabase, batchId)
+    }
   }
 
   setResponseStatus(event, 202)
