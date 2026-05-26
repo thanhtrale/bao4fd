@@ -66,8 +66,8 @@ export async function getArticleBySlug(supabase: SupabaseClient, slug: string) {
 
   if (error || !article) return null
 
-  // Get newer and older posts in same category
-  const [newerResult, olderResult] = await Promise.all([
+  // Get newer/older posts and total view count
+  const [newerResult, olderResult, viewsResult] = await Promise.all([
     supabase
       .from('articles')
       .select('slug, title')
@@ -86,10 +86,17 @@ export async function getArticleBySlug(supabase: SupabaseClient, slug: string) {
       .order('published_at', { ascending: false })
       .limit(1)
       .single(),
+    supabase
+      .from('article_daily_views')
+      .select('view_count')
+      .eq('article_id', article.id),
   ])
+
+  const totalViews = (viewsResult.data || []).reduce((sum: number, r: any) => sum + (r.view_count || 0), 0)
 
   return {
     ...article,
+    totalViews,
     newerPost: newerResult.data || null,
     olderPost: olderResult.data || null,
   }

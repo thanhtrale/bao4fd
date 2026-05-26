@@ -59,6 +59,8 @@ onMounted(() => {
         <span v-if="article.published_at">{{ relativeTime(article.published_at) }}</span>
         <span class="w-1 h-1 rounded-full bg-text-muted"></span>
         <span>{{ readingTime }} phút đọc</span>
+        <span v-if="article.totalViews" class="w-1 h-1 rounded-full bg-text-muted"></span>
+        <span v-if="article.totalViews">{{ article.totalViews.toLocaleString('vi-VN') }} lượt xem</span>
       </div>
 
       <!-- Hero image -->
