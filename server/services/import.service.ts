@@ -43,11 +43,10 @@ export async function checkDuplicateUrls(supabase: SupabaseClient, urls: string[
     .from('import_jobs')
     .select('url')
     .in('url', urls)
+    .eq('status', 'published')
 
   const jobUrls = new Set((existingJobs || []).map(j => j.url))
 
-  // Check existing articles by matching scraped source URL pattern in content or by slug
-  // For now, just check import_jobs duplicates — title dedup happens after scraping
   return urls.filter(url => jobUrls.has(url))
 }
 
@@ -115,12 +114,12 @@ export async function markJobRetry(supabase: SupabaseClient, jobId: string, retr
 }
 
 export async function getRemainingJobCount(supabase: SupabaseClient, batchId: string) {
+  // Count ALL non-terminal jobs (pending or processing)
   const { count, error } = await supabase
     .from('import_jobs')
     .select('id', { count: 'exact', head: true })
     .eq('batch_id', batchId)
-    .eq('status', 'pending')
-    .or('retry_after.is.null,retry_after.lte.' + new Date().toISOString())
+    .in('status', ['pending', 'processing'])
 
   if (error) throw error
   return count || 0
@@ -164,7 +163,8 @@ export async function incrementInvocationCount(supabase: SupabaseClient, batchId
   if (fetchError || !batch) throw fetchError || new Error('Batch not found')
 
   const newCount = (batch.invocation_count || 0) + 1
-  const maxInvocations = Math.ceil(batch.total_urls / 5) * 2
+  // Each URL can need up to 4 invocations (1 initial + 3 retries), processed in batches of 5
+  const maxInvocations = Math.ceil(batch.total_urls / 5) * 4 + batch.total_urls * 3
 
   // Safety checks
   const isStale = (Date.now() - new Date(batch.created_at).getTime()) > 30 * 60 * 1000
