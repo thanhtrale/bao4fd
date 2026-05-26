@@ -2,81 +2,79 @@ export default defineEventHandler(async (event) => {
   const user = await requireAdmin(event)
   const body = await readBody(event)
 
-  const { urls, categoryId, notifyEmail } = body as { urls?: string[]; categoryId?: string; notifyEmail?: boolean }
-
-  if (!urls || !Array.isArray(urls) || urls.length === 0) {
-    throw createError({ statusCode: 400, statusMessage: 'urls is required and must be a non-empty array' })
+  const { articles, categoryId, notifyEmail } = body as {
+    articles?: Array<{ url: string; categoryId: string }>
+    categoryId?: string
+    notifyEmail?: boolean
   }
 
-  if (urls.length > 100) {
-    throw createError({ statusCode: 400, statusMessage: 'Maximum 100 URLs per submission' })
+  // Support both old format (urls + categoryId) and new format (articles with per-item categoryId)
+  const { urls } = body as { urls?: string[] }
+
+  let articleList: Array<{ url: string; categoryId: string }> = []
+
+  if (articles && Array.isArray(articles) && articles.length > 0) {
+    articleList = articles
+  }
+  else if (urls && Array.isArray(urls) && urls.length > 0 && categoryId) {
+    articleList = urls.map(url => ({ url, categoryId }))
+  }
+  else {
+    throw createError({ statusCode: 400, statusMessage: 'articles or urls+categoryId is required' })
   }
 
-  if (!categoryId) {
-    throw createError({ statusCode: 400, statusMessage: 'categoryId is required' })
+  if (articleList.length > 100) {
+    throw createError({ statusCode: 400, statusMessage: 'Maximum 100 articles per submission' })
   }
 
-  // Validate URL format and domain
-  const invalidUrls: string[] = []
-  const unsupportedUrls: string[] = []
+  // Validate URLs
+  const supportedDomains = new Set(['vnexpress.net', 'tuoitre.vn'])
 
-  for (const url of urls) {
+  for (const item of articleList) {
     try {
-      const parsed = new URL(url)
+      const parsed = new URL(item.url)
       if (!['http:', 'https:'].includes(parsed.protocol)) {
-        invalidUrls.push(url)
-        continue
+        throw createError({ statusCode: 400, statusMessage: `Invalid URL: ${item.url}` })
       }
       const hostname = parsed.hostname.replace(/^www\./, '')
-      if (hostname !== 'vnexpress.net') {
-        unsupportedUrls.push(url)
+      if (!supportedDomains.has(hostname)) {
+        throw createError({ statusCode: 400, statusMessage: `Unsupported domain: ${hostname}` })
       }
     }
-    catch {
-      invalidUrls.push(url)
+    catch (err: any) {
+      if (err.statusCode) throw err
+      throw createError({ statusCode: 400, statusMessage: `Invalid URL: ${item.url}` })
     }
-  }
-
-  if (invalidUrls.length > 0) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: `Invalid URLs: ${invalidUrls.join(', ')}`,
-    })
-  }
-
-  if (unsupportedUrls.length > 0) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: `Unsupported domains: ${unsupportedUrls.join(', ')}`,
-    })
   }
 
   const supabase = useSupabaseAdmin()
 
-  // Verify category exists
-  const { data: category } = await supabase
-    .from('categories')
-    .select('id')
-    .eq('id', categoryId)
-    .single()
-
-  if (!category) {
-    throw createError({ statusCode: 400, statusMessage: 'Category not found' })
+  // Verify all category IDs exist
+  const categoryIds = [...new Set(articleList.map(a => a.categoryId))]
+  const { data: cats } = await supabase.from('categories').select('id').in('id', categoryIds)
+  const validCatIds = new Set((cats || []).map(c => c.id))
+  const invalidCats = categoryIds.filter(id => !validCatIds.has(id))
+  if (invalidCats.length > 0) {
+    throw createError({ statusCode: 400, statusMessage: `Category not found: ${invalidCats.join(', ')}` })
   }
 
   // Dedup check
-  const { checkDuplicateUrls, createBatch } = await import('../../services/import.service')
-  const duplicates = await checkDuplicateUrls(supabase, urls)
-  const uniqueUrls = urls.filter(url => !duplicates.includes(url))
+  const { checkDuplicateUrls, createBatchWithArticles } = await import('../../services/import.service')
+  const allUrls = articleList.map(a => a.url)
+  const duplicates = await checkDuplicateUrls(supabase, allUrls)
+  const duplicateSet = new Set(duplicates)
+  const uniqueArticles = articleList.filter(a => !duplicateSet.has(a.url))
 
-  if (uniqueUrls.length === 0) {
+  if (uniqueArticles.length === 0) {
     return { batchId: null, skipped: duplicates, message: 'All URLs are duplicates' }
   }
 
-  // Create batch and jobs
-  const batchId = await createBatch(supabase, {
-    categoryId,
-    urls: uniqueUrls,
+  // Use the first article's category as the batch-level category
+  const batchCategoryId = uniqueArticles[0].categoryId
+
+  const batchId = await createBatchWithArticles(supabase, {
+    categoryId: batchCategoryId,
+    articles: uniqueArticles,
     createdBy: user.id,
     notifyEmail: !!notifyEmail,
   })
@@ -103,7 +101,7 @@ export default defineEventHandler(async (event) => {
   setResponseStatus(event, 202)
   return {
     batchId,
-    queued: uniqueUrls.length,
+    queued: uniqueArticles.length,
     skipped: duplicates,
   }
 })

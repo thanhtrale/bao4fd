@@ -7,6 +7,13 @@ export interface CreateBatchInput {
   notifyEmail?: boolean
 }
 
+export interface CreateBatchWithArticlesInput {
+  categoryId: string
+  articles: Array<{ url: string; categoryId: string }>
+  createdBy: string
+  notifyEmail?: boolean
+}
+
 export async function createBatch(supabase: SupabaseClient, input: CreateBatchInput) {
   const { data: batch, error: batchError } = await supabase
     .from('import_batches')
@@ -25,6 +32,37 @@ export async function createBatch(supabase: SupabaseClient, input: CreateBatchIn
   const jobs = input.urls.map(url => ({
     batch_id: batch.id,
     url,
+    status: 'pending' as const,
+  }))
+
+  const { error: jobsError } = await supabase
+    .from('import_jobs')
+    .insert(jobs)
+
+  if (jobsError) throw jobsError
+
+  return batch.id as string
+}
+
+export async function createBatchWithArticles(supabase: SupabaseClient, input: CreateBatchWithArticlesInput) {
+  const { data: batch, error: batchError } = await supabase
+    .from('import_batches')
+    .insert({
+      category_id: input.categoryId,
+      total_urls: input.articles.length,
+      status: 'pending',
+      created_by: input.createdBy,
+      notify_email: !!input.notifyEmail,
+    })
+    .select('id')
+    .single()
+
+  if (batchError || !batch) throw batchError || new Error('Failed to create batch')
+
+  const jobs = input.articles.map(a => ({
+    batch_id: batch.id,
+    url: a.url,
+    category_id: a.categoryId,
     status: 'pending' as const,
   }))
 
@@ -56,7 +94,7 @@ export async function getJobsToProcess(supabase: SupabaseClient, batchId: string
   // so we select then update status to 'processing' as a claim
   const { data: jobs, error } = await supabase
     .from('import_jobs')
-    .select('id, url, retry_count')
+    .select('id, url, retry_count, category_id')
     .eq('batch_id', batchId)
     .eq('status', 'pending')
     .or('retry_after.is.null,retry_after.lte.' + new Date().toISOString())
@@ -201,22 +239,29 @@ export async function getBatchesWithCounts(supabase: SupabaseClient) {
 
   const { data: jobs, error: jobsError } = await supabase
     .from('import_jobs')
-    .select('batch_id, status')
+    .select('batch_id, status, category_id, categories:category_id(name)')
     .in('batch_id', batchIds)
 
   if (jobsError) throw jobsError
 
-  // Group counts
+  // Group counts and collect category names
   const countMap: Record<string, Record<string, number>> = {}
+  const categoryNamesMap: Record<string, Set<string>> = {}
   for (const job of (jobs || [])) {
     if (!countMap[job.batch_id]) {
       countMap[job.batch_id] = { pending: 0, processing: 0, published: 0, failed: 0 }
     }
     countMap[job.batch_id][job.status] = (countMap[job.batch_id][job.status] || 0) + 1
+    const catName = (job.categories as any)?.name
+    if (catName) {
+      if (!categoryNamesMap[job.batch_id]) categoryNamesMap[job.batch_id] = new Set()
+      categoryNamesMap[job.batch_id].add(catName)
+    }
   }
 
   return (batches || []).map(b => ({
     ...b,
+    categoryNames: categoryNamesMap[b.id] ? [...categoryNamesMap[b.id]] : (b.categories ? [(b.categories as any).name] : []),
     counts: countMap[b.id] || { pending: 0, processing: 0, published: 0, failed: 0 },
   }))
 }

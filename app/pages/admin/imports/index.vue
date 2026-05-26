@@ -25,6 +25,7 @@ interface Batch {
   created_at: string
   completed_at: string | null
   categories: { name: string } | null
+  categoryNames: string[]
   counts: BatchCounts
 }
 
@@ -200,7 +201,7 @@ function jobStatusColor(status: string): string {
           <div class="flex items-center gap-3">
             <span class="text-xs text-slate-400 transition-transform" :class="{ 'rotate-90': expandedBatch === batch.id }">▶</span>
             <span class="font-medium text-slate-800">
-              {{ batch.categories?.name || 'Unknown' }}
+              {{ batch.categoryNames?.length ? batch.categoryNames.join(', ') : (batch.categories?.name || 'Unknown') }}
             </span>
             <span :class="['text-xs px-2 py-0.5 rounded-full font-medium', statusColor(batch.status)]">
               {{ statusLabel(batch.status) }}

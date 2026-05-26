@@ -1,8 +1,10 @@
 import type { Scraper } from './types'
 import { vnexpressScraper } from './vnexpress'
+import { tuoitreScraper } from './tuoitre'
 
 const scraperMap: Record<string, Scraper> = {
   'vnexpress.net': vnexpressScraper,
+  'tuoitre.vn': tuoitreScraper,
 }
 
 export function getScraperForUrl(url: string): Scraper {

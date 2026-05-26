@@ -1,0 +1,16 @@
+const cheerio = require("cheerio")
+const fs = require("fs")
+const html = fs.readFileSync("/tmp/tuoitre-article.html","utf8")
+const $ = cheerio.load(html)
+console.log("h1:", $("h1").first().text().trim().substring(0,100))
+console.log("h1.article-title:", $("h1.article-title").text().trim().substring(0,100))
+console.log("h2.sapo:", $("h2.sapo").text().trim().substring(0,100))
+console.log(".detail-content:", $(".detail-content").length)
+console.log("#main-detail-body:", $("#main-detail-body").length)
+console.log("#main-detail:", $("#main-detail").length)
+console.log("div.content.fck:", $("div.content.fck").length)
+console.log(".detail-cmain:", $(".detail-cmain").length)
+const ogi = $("meta[property='og:image']").attr("content") || ""
+const ogd = $("meta[property='og:description']").attr("content") || ""
+console.log("og:image:", ogi.substring(0,100))
+console.log("og:desc:", ogd.substring(0,100))

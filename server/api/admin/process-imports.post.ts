@@ -149,7 +149,7 @@ export default defineEventHandler(async (event) => {
           excerpt: scraped.description,
           content: scraped.content,
           thumbnail: scraped.thumbnail,
-          category_id: batch.category_id,
+          category_id: job.category_id || batch.category_id,
           is_published: true,
           published_at: new Date().toISOString(),
         })
