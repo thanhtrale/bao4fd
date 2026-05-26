@@ -78,7 +78,7 @@ This is an automated alert from Mini News Portal.`
 
   try {
     const info = await transport.sendMail({
-      from: config.smtpUser,
+      from: config.smtpFrom || config.adminEmail,
       to: config.adminEmail,
       subject,
       text,
@@ -176,7 +176,7 @@ This is an automated report from Mini News Portal.`
 
   try {
     const info = await transport.sendMail({
-      from: config.smtpUser,
+      from: config.smtpFrom || config.adminEmail,
       to: config.adminEmail,
       subject,
       text,
